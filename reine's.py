@@ -177,4 +177,4 @@ def eicolor(i):
 
 
 
-client.run('NTY0MjcyNDc5MzQ2ODg0NjEz.XfjCrw.AQSxeN92qYE1x97Xg9sk0L7JAoI')
+client.run(Taken)
