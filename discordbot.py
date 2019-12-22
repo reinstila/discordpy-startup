@@ -299,4 +299,4 @@ async def rect(ctx, about = "募集", cnt = 4, settime = 10.0):
 
 
 
-client.run(token)
+client.run("NTY0MjcyNDc5MzQ2ODg0NjEz.Xf7mcg.laQJXcSvBb5E4hxQEeHm0SmfQGQ")
