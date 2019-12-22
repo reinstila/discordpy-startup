@@ -3,17 +3,38 @@ from googletrans import Translator
 from discord.ext import commands
 import requests
 import xml.etree.ElementTree as ET
+import urllib.request
 import json
 import random
 import asyncio
 import re
+import os
 
 
 
 client = discord.Client(verbose=True)
 translator = Translator()
 
+citycodes = {
+    "土浦": '080020',
+    "水戸": '080010',
+    "札幌": '016010',
+    "仙台": '040010',
+    "東京": '130010',
+    "横浜": '140010',
+    "名古屋": '230010',
+    "大阪": '270000',
+    "広島": '340010',
+    "福岡": '400010',
+    "鹿児島": '460010',
+    "那覇": '471010',
+    "神戸": '280010',
+    "さいたま": '110010'
+}
 
+f = open("tenki.json", encoding='utf-8_sig')
+tenki = json.load(f)
+f.close()
 
 
 # 起動時に動作する処理
@@ -21,6 +42,7 @@ translator = Translator()
 async def on_ready():
     # 起動したらターミナルにログイン通知が表示される
     print('ログインしました')
+
 
 
 @client.event
@@ -37,19 +59,19 @@ async def on_message(message):
             befor_lang = detact.lang
             if befor_lang == 'ja':
                 convert_string = translator.translate(str, src=befor_lang, dest='en')
-                embed = discord.Embed(title='翻訳しました！　Done!', color=0xff0000)
+                embed = discord.Embed(title='翻訳しました！　Done!', color=0xffffff)
                 embed.add_field(name='-----------------------------', value=convert_string.text, inline=False)
                 await message.channel.send(embed=embed)
             else:
                 convert_string = translator.translate(str, src=befor_lang, dest='ja')
-                embed = discord.Embed(title='翻訳しました！　Done!', color=0xff0000)
+                embed = discord.Embed(title='翻訳しました！　Done!', color=0xffffff)
                 embed.add_field(name='-----------------------------', value=convert_string.text, inline=False)
                 await message.channel.send(embed=embed)
         else:
             trans, str = list(say.split('='))
             befor_lang, after_lang = list(trans.split('-'))
             convert_string = translator.translate(str, src=befor_lang, dest=after_lang)
-            embed = discord.Embed(title='翻訳しました！　Done!', color=0xff0000)
+            embed = discord.Embed(title='翻訳しました！　Done!', color=0xffffff)
             embed.add_field(name='-----------------------------', value=convert_string.text, inline=False)
             await message.channel.send(embed=embed)
 
@@ -57,9 +79,38 @@ async def on_message(message):
         say = message.content
         s = say[8:]
         detect = translator.detect(s)
-        m = 'この文字列の言語はたぶん ' + detect.lang + ' です。'
+        m = 'この文字列の言語はおそらく ' + detect.lang + ' です！'
         await message.channel.send(m)
 
+
+
+#不適切な言葉削除
+    if re.search('死ね', message.content):
+        await message.delete()
+        await message.channel.send("すみません>< 不適切な言葉が含まれていたので削除しました。")
+
+
+    if message.content.startswith(",ダイス"): 
+        if client.user != message.author:
+            randomnumber = random.randint(1,100)
+            number = randomnumber
+            await message.channel.send(number)
+            await message.channel.send("がでました！")
+
+
+#    if message.content.startswith(",トランプ"):
+#        my_files = [
+#            discord.File("torannpu-illust15.png"),
+#            discord.File("torannpu-illust16.png"),
+#        ]
+#        await message.channel.send(random.choice(files=my_files))
+
+
+    if message.content.startswith(",おみくじ"):
+        if client.user != message.author:
+            embed = discord.Embed(title="おみくじ", description= message.author.mention + "さんの今日の運勢は！", color=0x2ECC69)
+            embed.add_field(name="[運勢] ", value=random.choice(('大吉', '吉', '中吉', '小吉', '末吉','凶', '大凶')), inline=False)
+            await message.channel.send(embed=embed)
 
 #挨拶
     if re.search("おはよう", message.content):
@@ -78,23 +129,43 @@ async def on_message(message):
             await message.channel.send(ge)
 
 
+
+
+
 #helpやinfo
     if message.content.startswith(",info"):
         if client.user != message.author:
             embed = discord.Embed(title="すてぃら", description="こんにちは！すてぃらといいます！私は「雨宿り ReiNe Shelter:umbrella:」のオーナーReiNeによるBotです。よろしくお願いしますね^^", color=0x87cefa)
             embed.add_field(name="作成者", value="ReiNe#3517")
-            embed.add_field(name="おでかけサーバー数", value=2)
+            embed.add_field(name="おでかけサーバー数", value=len(client.guilds))
             embed.add_field(name="招待リンク", value="https://discordapp.com/api/oauth2/authorize?client_id=564272479346884613&permissions=8&scope=bot")
+            await message.channel.send(embed=embed)
+
+
+    if message.content.startswith(",help"):
+        if client.user != message.author:
+            embed = discord.Embed(title="コマンド", description="すてぃら のコマンド一覧:", color=0x87cefa)
+            embed.add_field(name=",help", value="このメッセージを送信します。", inline=False)
+            embed.add_field(name=",add X Y", value="足し算をします。", inline=False)
+            embed.add_field(name=",multiply X Y", value="掛け算をします。", inline=False)
+            embed.add_field(name=",kick mention", value="キックをします。", inline=False)
+            embed.add_field(name=",ban mention", value="BANをします。", inline=False)
+            embed.add_field(name=",cat", value="猫のgif画像を送信します。", inline=False)
+            embed.add_field(name=",ダイス", value="100面ダイスを振ります。", inline=False)
+            embed.add_field(name=",おみくじ", value="おみくじを引きます。", inline=False)
+            embed.add_field(name=",コイントス", value="コイントスをします。", inline=False)
+            embed.add_field(name=",地震", value="地震の情報をお伝えします。", inline=False)
+            embed.add_field(name=",trans", value=',trans "翻訳させたい言葉"', inline=False)
+            embed.add_field(name=",info", value="このbotに関する情報を送信します。", inline=False) 
             await message.channel.send(embed=embed)
 
 
 
 
-
 #地震情報
-    if message.content == ',地震情報':
+    if message.content == ',地震':
         er = e()
-        embed = discord.Embed(title='**地震情報**', description='', color=er['color'])
+        embed = discord.Embed(title='**地震情報**', description='地震が発生したようです！　　以下をご覧ください。', color=er['color'])
         embed.set_thumbnail(url=er['icon'])
         embed.add_field(name='発生時刻', value=er['time'], inline=True)
         embed.add_field(name='震源地', value=er['epicenter'], inline=True)
@@ -171,6 +242,59 @@ def eicolor(i):
     elif i == '7':
         return(0xffff6c)
 
+
+@client.event
+async def rect(ctx, about = "募集", cnt = 4, settime = 10.0):
+    cnt, settime = int(cnt), float(settime)
+    reaction_member = [">>>"]
+    test = discord.Embed(title=about,colour=0x1e90ff)
+    test.add_field(name=f"あと{cnt}人 募集中\n", value=None, inline=True)
+    msg = await ctx.send(embed=test)
+    #投票の欄
+    await msg.add_reaction('⏫')
+    await msg.add_reaction('✖')
+
+    def check(reaction, user):
+        emoji = str(reaction.emoji)
+        if user.bot == True:    # botは無視
+            pass
+        else:
+            return emoji == '⏫' or emoji == '✖'
+
+    while len(reaction_member)-1 <= cnt:
+        try:
+            reaction, user = await client.wait_for('reaction_add', timeout=settime, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send('残念、人が足りなかったようだ...')
+            break
+        else:
+            print(str(reaction.emoji))
+            if str(reaction.emoji) == '⏫':
+                reaction_member.append(user.name)
+                cnt -= 1
+                test = discord.Embed(title=about,colour=0x1e90ff)
+                test.add_field(name=f"あと__{cnt}__人 募集中\n", value='\n'.join(reaction_member), inline=True)
+                await msg.edit(embed=test)
+
+                if cnt == 0:
+                    test = discord.Embed(title=about,colour=0x1e90ff)
+                    test.add_field(name=f"あと__{cnt}__人 募集中\n", value='\n'.join(reaction_member), inline=True)
+                    await msg.edit(embed=test)
+                    finish = discord.Embed(title=about,colour=0x1e90ff)
+                    finish.add_field(name="おっと、メンバーがきまったようだ",value='\n'.join(reaction_member), inline=True)
+                    await ctx.send(embed=finish)
+
+            elif str(reaction.emoji) == '✖':
+                if user.name in reaction_member:
+                    reaction_member.remove(user.name)
+                    cnt += 1
+                    test = discord.Embed(title=about,colour=0x1e90ff)
+                    test.add_field(name=f"あと__{cnt}__人 募集中\n", value='\n'.join(reaction_member), inline=True)
+                    await msg.edit(embed=test)
+                else:
+                    pass
+        # リアクション消す。メッセージ管理権限がないとForbidden:エラーが出ます。
+        await msg.remove_reaction(str(reaction.emoji), user)
 
 
 
